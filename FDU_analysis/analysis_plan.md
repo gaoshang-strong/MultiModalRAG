@@ -5,17 +5,7 @@ Cohort: ~511 patients, targeted panel DNA-seq, tumor + blood paired, hg38 coordi
 
 ---
 
-## 1. Somatic Mutation Landscape
-
-**What:** Compute mutation frequency per gene across the cohort. Visualize as an oncoprint (waterfall plot) for the top 20–30 genes.
-
-**Preferred outcome:** A ranked list of the most frequently mutated cancer genes (e.g., TP53, CDH1, ARID1A, RHOA, KRAS) and their co-occurrence patterns across patients.
-
-**Why:** Establishes the baseline mutational landscape of this Chinese gastric cancer cohort and enables comparison to TCGA-STAD. Chinese gastric cancer has known epidemiological and molecular differences from Western cohorts; confirming or contrasting driver gene frequencies is a necessary first step for any downstream analysis.
-
----
-
-## 2. Significantly Mutated Gene (SMG) Detection
+## 1. Significantly Mutated Gene (SMG) Detection
 
 **What:** Apply statistical frameworks (dNdScv or MutSigCV-equivalent) to identify genes mutated more than expected by background mutation rate.
 
@@ -189,20 +179,19 @@ Cohort: ~511 patients, targeted panel DNA-seq, tumor + blood paired, hg38 coordi
 
 | # | Analysis | Primary Data | Output |
 |---|---|---|---|
-| 1 | Mutation landscape / oncoprint | `somt_hg38.maf` | Top mutated genes, frequencies |
-| 2 | SMG detection | `somt_hg38.maf` | Driver gene list with q-values |
-| 3 | Mutational signatures | `somt_hg38.maf` | Per-patient SBS signature fractions |
-| 4 | TMB distribution & correlation | clinical + VCFs | TMB cutoffs, clinical associations |
-| 5 | MSI/dMMR classifier | clinical + `somt.maf` | Sequence-based MSI predictor |
-| 6 | Co-mutation / mutual exclusivity | `somt_hg38.maf` | Gene pair heatmap |
-| 7 | Molecular subtyping | clinical + MAF | EBV/MSI/GS/CIN subtype calls |
-| 8 | Treatment response prediction | neoadjuvant clinical + MAF | TRG predictor, AUC |
-| 9 | Germline pathogenic variants | `germ.maf` | Carrier frequency, candidate genes |
-| 10 | Clonality / VAF distribution | per-patient VCFs | Clonal fraction per patient |
-| 11 | Cross-cohort FDU vs. TCGA | combined MAF | Population-level differences |
-| 12 | Survival analysis | clinical + MAF | Prognostic genomic features |
-| 13 | HER2 genomic context | clinical + MAF | HER2-associated co-mutations |
-| 14 | Naive vs. neoadjuvant comparison | clinical + MAF | Baseline genomic equivalence test |
-| 15 | Germline + somatic double-hit (Knudson) | `germ.maf` + somatic VCFs | Biallelic inactivation calls per patient/gene |
-| 16 | Pathway-level multi-hit analysis | somatic + germline MAFs | Pathway disruption matrix, multi-hit subgroups |
-| 17 | Biallelic MMR / Lynch syndrome stratification | `germ.maf` + somatic VCFs + clinical | Lynch prevalence, IHC vs. genomic concordance |
+| 1 | SMG detection | `somt_hg38.maf` | Driver gene list with q-values |
+| 2 | Mutational signatures | `somt_hg38.maf` | Per-patient SBS signature fractions |
+| 3 | TMB distribution & correlation | clinical + VCFs | TMB cutoffs, clinical associations |
+| 4 | MSI/dMMR classifier | clinical + `somt.maf` | Sequence-based MSI predictor |
+| 5 | Co-mutation / mutual exclusivity | `somt_hg38.maf` | Gene pair heatmap |
+| 6 | Molecular subtyping | clinical + MAF | EBV/MSI/GS/CIN subtype calls |
+| 7 | Treatment response prediction | neoadjuvant clinical + MAF | TRG predictor, AUC |
+| 8 | Germline pathogenic variants | `germ.maf` | Carrier frequency, candidate genes |
+| 9 | Clonality / VAF distribution | per-patient VCFs | Clonal fraction per patient |
+| 10 | Cross-cohort FDU vs. TCGA | combined MAF | Population-level differences |
+| 11 | Survival analysis | clinical + MAF | Prognostic genomic features |
+| 12 | HER2 genomic context | clinical + MAF | HER2-associated co-mutations |
+| 13 | Naive vs. neoadjuvant comparison | clinical + MAF | Baseline genomic equivalence test |
+| 14 | Germline + somatic double-hit (Knudson) | `germ.maf` + somatic VCFs | Biallelic inactivation calls per patient/gene |
+| 15 | Pathway-level multi-hit analysis | somatic + germline MAFs | Pathway disruption matrix, multi-hit subgroups |
+| 16 | Biallelic MMR / Lynch syndrome stratification | `germ.maf` + somatic VCFs + clinical | Lynch prevalence, IHC vs. genomic concordance |

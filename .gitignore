@@ -1,3 +1,6 @@
+# Literature (local only, not tracked)
+literature/
+
 # Data directories (allow README files through)
 TCGA-STAD/*
 !TCGA-STAD/README.md
