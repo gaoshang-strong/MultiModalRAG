@@ -1,0 +1,33 @@
+# Data directories
+TCGA-STAD/
+Target_panel_DNA_seq_FDU/
+
+# Logs
+download_log.txt
+*.log
+
+# Claude settings
+.claude/
+
+# Common data file types
+*.csv
+*.tsv
+*.maf
+*.vcf
+*.gtf
+*.gz
+*.rds
+*.bam
+*.bai
+*.bed
+*.txt
+
+# Python / R artifacts
+__pycache__/
+*.pyc
+.Rhistory
+.RData
+*.Rproj.user/
+
+# Jupyter
+.ipynb_checkpoints/
