@@ -1,5 +1,6 @@
-# Literature (local only, not tracked)
+# Literature — track only markdown summaries, not data files
 literature/
+!literature/**/*.md
 
 # Data directories (allow README files through)
 TCGA-STAD/*
