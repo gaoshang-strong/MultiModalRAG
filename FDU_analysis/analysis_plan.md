@@ -145,6 +145,46 @@ Cohort: ~511 patients, targeted panel DNA-seq, tumor + blood paired, hg38 coordi
 
 ---
 
+## 15. Germline + Somatic Double-Hit Analysis (Knudson Two-Hit)
+
+**What:** For each patient, cross-reference `germ.maf` and somatic VCFs to find genes carrying both a germline variant (pathogenic or likely pathogenic) and an independent somatic mutation. Also flag somatic variants with high VAF (> 0.7) in known tumor suppressors as a proxy for LOH — i.e., somatic mutation + loss of the remaining wild-type allele.
+
+**Double-hit criteria (any two of the following in the same gene, same patient):**
+- Germline pathogenic/likely pathogenic variant (ClinVar CLNSIG)
+- Somatic coding mutation
+- Allelic imbalance: somatic AF > 0.7 (suggesting LOH of the second allele)
+- Homozygous somatic variant (GT = 1/1 in tumor)
+
+**Target genes:** Classical tumor suppressors — TP53, PTEN, APC, CDH1, CDKN2A, RB1, SMAD4, ARID1A — and all MMR genes (MLH1, MSH2, MSH6, PMS2).
+
+**Preferred outcome:** Per-patient double-hit calls; cohort-level frequency of biallelic inactivation per gene; identification of Lynch syndrome cases (germline MMR + somatic second hit).
+
+**Why:** A single heterozygous mutation in a tumor suppressor is rarely sufficient for loss of function. The two-hit model (Knudson 1971) predicts that functional inactivation requires both alleles to be compromised. Treating somatic mutations in isolation — as most MAF-level analyses do — underestimates the true burden of complete tumor suppressor loss. This analysis leverages the unique matched germline+somatic design of this cohort to identify patients with confirmed biallelic inactivation, which has direct implications for prognosis, familial risk (Lynch syndrome), and targeted therapy eligibility (e.g., PARP inhibitors for BRCA/HRD-related double hits).
+
+---
+
+## 16. Pathway-Level Multi-Hit Analysis
+
+**What:** Map all somatic (and germline) mutations onto curated cancer pathways (Wnt/β-catenin, RTK/RAS, PI3K/AKT/mTOR, TGF-β, cell cycle/RB, DNA damage repair, chromatin remodeling, Hippo). For each patient, count the number of distinct genes hit per pathway. Identify patients with 2+ hits in the same pathway ("pathway double/triple hit") even if no single gene is hit twice.
+
+**Triple-hit example:** A patient with ARID1A somatic mutation + SMARCA4 somatic mutation + PBRM1 germline variant = triple hit in the chromatin remodeling pathway.
+
+**Preferred outcome:** Pathway-level multi-hit frequency matrix (patients × pathways); patient subgroups defined by which pathways are maximally disrupted; association of pathway multi-hit burden with MSI, TMB, TRG, and OS.
+
+**Why:** Tumor suppressor genes within the same pathway are functionally redundant — hitting multiple members of the same pathway compounds functional loss even without biallelic inactivation of any single gene. Pathway-level multi-hit burden better captures the degree of pathway disruption than gene-level mutation counts alone. This is especially relevant for pathways like chromatin remodeling (ARID1A, ARID1B, SMARCA4) and Wnt (APC, CTNNB1, RNF43, AXIN1/2), where gastric cancer accumulates multiple hits across pathway members.
+
+---
+
+## 17. Biallelic MMR Inactivation and Lynch Syndrome Stratification
+
+**What:** Specifically for the four MMR genes (MLH1, MSH2, MSH6, PMS2): identify patients with (a) germline pathogenic variant alone (Lynch suspect), (b) germline + somatic second hit (confirmed biallelic loss), or (c) two somatic hits (sporadic biallelic). Cross-validate against clinical MSI/dMMR IHC status.
+
+**Preferred outcome:** Prevalence of germline Lynch syndrome in this Chinese gastric cancer cohort; concordance rate between genomic biallelic MMR inactivation and IHC dMMR calls; identification of patients with dMMR by genomics but pMMR by IHC (discordant cases for clinical follow-up).
+
+**Why:** Lynch syndrome is the most common hereditary gastric cancer predisposition and is actionable (surveillance, cascade testing of relatives, immunotherapy eligibility). IHC can produce false-negative MMR results (especially MLH1 missense mutations that preserve protein expression but abolish function). Genomic biallelic MMR inactivation is orthogonal evidence that resolves IHC discordance and directly informs clinical management. This analysis builds on #9 (germline) and #15 (double-hit) but focuses specifically on the MMR axis given its direct link to MSI, immunotherapy, and hereditary risk.
+
+---
+
 ## Summary Table
 
 | # | Analysis | Primary Data | Output |
@@ -163,3 +203,6 @@ Cohort: ~511 patients, targeted panel DNA-seq, tumor + blood paired, hg38 coordi
 | 12 | Survival analysis | clinical + MAF | Prognostic genomic features |
 | 13 | HER2 genomic context | clinical + MAF | HER2-associated co-mutations |
 | 14 | Naive vs. neoadjuvant comparison | clinical + MAF | Baseline genomic equivalence test |
+| 15 | Germline + somatic double-hit (Knudson) | `germ.maf` + somatic VCFs | Biallelic inactivation calls per patient/gene |
+| 16 | Pathway-level multi-hit analysis | somatic + germline MAFs | Pathway disruption matrix, multi-hit subgroups |
+| 17 | Biallelic MMR / Lynch syndrome stratification | `germ.maf` + somatic VCFs + clinical | Lynch prevalence, IHC vs. genomic concordance |
