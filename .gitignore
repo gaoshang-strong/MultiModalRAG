@@ -1,6 +1,8 @@
-# Data directories
-TCGA-STAD/
-Target_panel_DNA_seq_FDU/
+# Data directories (allow README files through)
+TCGA-STAD/*
+!TCGA-STAD/README.md
+Target_panel_DNA_seq_FDU/*
+!Target_panel_DNA_seq_FDU/README.md
 
 # Logs
 download_log.txt
