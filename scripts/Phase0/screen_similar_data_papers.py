@@ -5,13 +5,22 @@ Reads CSVs from Paper_searching/results/, calls DeepSeek to extract structured d
 from each abstract, computes a weighted similarity score, and saves ranked results
 to literature/00_similar_data_paper_review/.
 
+Raw DeepSeek responses are saved incrementally to raw_{stem}.json after each batch,
+allowing crash recovery and schema-free re-parsing without re-calling the API.
+
 Usage:
+    # Normal run — calls DeepSeek, saves raw JSON + screened CSV
     python screen_similar_data_papers.py \
         --csvs cancer_targeted_panel_cohort_clinical_outcomes_2026-05-16.csv \
                cancer_matched_germline_somatic_panel_2026-05-16.csv
 
+    # Re-parse from saved JSON without any API calls
+    python screen_similar_data_papers.py \
+        --csvs cancer_targeted_panel_cohort_clinical_outcomes_2026-05-16.csv \
+        --reparse
+
 Environment:
-    DEEPSEEK_API_KEY   required
+    DEEPSEEK_API_KEY   required (not needed with --reparse)
 """
 
 import argparse
@@ -107,7 +116,8 @@ def build_prompt(batch: list[dict]) -> str:
         "",
         FIELD_DEFINITIONS,
         "",
-        "Return a JSON array — one object per paper in the exact schema above.",
+        'Return a JSON object with a single key "papers" whose value is an array'
+        " — one object per paper in the exact schema above, in the same order as the input.",
         "",
         "Papers:",
     ]
@@ -152,16 +162,15 @@ def call_api(client: OpenAI, model: str, batch: list[dict]) -> str:
 def parse_response(raw: str, batch: list[dict]) -> dict:
     """Map response items to pmids by position — DeepSeek does not echo pmid in output."""
     data = json.loads(raw)
-    if isinstance(data, dict):
-        for val in data.values():
-            if isinstance(val, list):
-                data = val
-                break
-        else:
-            raise ValueError(f"Unexpected JSON structure: {list(data.keys())}")
-    if len(data) != len(batch):
-        raise ValueError(f"Response length {len(data)} != batch length {len(batch)}")
-    return {str(paper["pmid"]).strip(): item for paper, item in zip(batch, data)}
+    if not isinstance(data, dict) or "papers" not in data:
+        raise ValueError(f"Expected JSON object with 'papers' key, got: {type(data).__name__} "
+                         f"with keys {list(data.keys()) if isinstance(data, dict) else 'N/A'}")
+    items = data["papers"]
+    if not isinstance(items, list):
+        raise ValueError(f"'papers' value must be a list, got {type(items).__name__}")
+    if len(items) != len(batch):
+        raise ValueError(f"Response length {len(items)} != batch length {len(batch)}")
+    return {str(paper["pmid"]).strip(): item for paper, item in zip(batch, items)}
 
 
 def process_batch(client: OpenAI, model: str, batch: list[dict], max_retries: int = 3) -> dict:
@@ -187,6 +196,20 @@ def process_batch(client: OpenAI, model: str, batch: list[dict], max_retries: in
     return {}
 
 
+# --- Raw JSON persistence -------------------------------------------------------
+
+def load_raw_json(path: str) -> dict:
+    if os.path.isfile(path):
+        with open(path) as f:
+            return json.load(f)
+    return {}
+
+
+def save_raw_json(path: str, results: dict) -> None:
+    with open(path, "w") as f:
+        json.dump(results, f, indent=2)
+
+
 # --- Main screening logic -------------------------------------------------------
 
 EXTRACTED_COLS = [
@@ -199,7 +222,14 @@ EXTRACTED_COLS = [
 LIST_COLS = {"clinical_endpoints", "key_analyses", "key_findings"}
 
 
-def screen_csv(client: OpenAI, model: str, csv_path: str, batch_size: int) -> pd.DataFrame:
+def screen_csv(
+    client: OpenAI,
+    model: str,
+    csv_path: str,
+    batch_size: int,
+    raw_json_path: str,
+    reparse: bool,
+) -> pd.DataFrame:
     df = pd.read_csv(csv_path, dtype=str).fillna("")
     has_abstract = df["abstract"].str.strip() != ""
     df_with = df[has_abstract].copy()
@@ -208,18 +238,33 @@ def screen_csv(client: OpenAI, model: str, csv_path: str, batch_size: int) -> pd
     print(f"\n{os.path.basename(csv_path)}: {len(df)} papers "
           f"({len(df_with)} with abstracts, {len(df_without)} skipped)")
 
-    records = df_with[["pmid", "title", "abstract"]].to_dict(orient="records")
-    batches = [records[i: i + batch_size] for i in range(0, len(records), batch_size)]
+    # Load any previously saved results (enables crash recovery and --reparse)
+    results: dict[str, dict] = load_raw_json(raw_json_path)
+    if results:
+        print(f"  Loaded {len(results)} existing results from {os.path.basename(raw_json_path)}")
 
-    results: dict[str, dict] = {}
-    for idx, batch in enumerate(batches):
-        start = idx * batch_size + 1
-        end = min(start + batch_size - 1, len(records))
-        print(f"  Batch {idx + 1}/{len(batches)} — papers {start}–{end} ...")
-        batch_results = process_batch(client, model, batch)
-        for paper in batch:
-            pmid = str(paper["pmid"]).strip()
-            results[pmid] = batch_results.get(pmid, {"reason": "parse_error"})
+    if reparse:
+        print("  --reparse: skipping API calls, using saved JSON only.")
+    else:
+        records = df_with[["pmid", "title", "abstract"]].to_dict(orient="records")
+        pending = [r for r in records if str(r["pmid"]).strip() not in results]
+
+        if not pending:
+            print("  All papers already processed — nothing to call.")
+        else:
+            print(f"  {len(pending)} papers to process ({len(records) - len(pending)} already cached).")
+            batches = [pending[i: i + batch_size] for i in range(0, len(pending), batch_size)]
+            for idx, batch in enumerate(batches):
+                start = idx * batch_size + 1
+                end = min(start + batch_size - 1, len(pending))
+                print(f"  Batch {idx + 1}/{len(batches)} — papers {start}–{end} ...")
+                batch_results = process_batch(client, model, batch)
+                for paper in batch:
+                    pmid = str(paper["pmid"]).strip()
+                    results[pmid] = batch_results.get(pmid, {"reason": "parse_error"})
+                # Save after every batch so a crash loses at most one batch
+                save_raw_json(raw_json_path, results)
+            print(f"  Raw JSON saved → {raw_json_path}")
 
     for col in EXTRACTED_COLS:
         df_with[col] = df_with["pmid"].map(
@@ -254,6 +299,8 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--model", default=DEFAULT_MODEL, help=f"DeepSeek model (default: {DEFAULT_MODEL})")
     parser.add_argument("--batch-size", type=int, default=10, help="Papers per API call (default: 10)")
+    parser.add_argument("--reparse", action="store_true",
+                        help="Re-parse from saved raw JSON without calling the API")
     return parser.parse_args()
 
 
@@ -261,11 +308,11 @@ def main():
     args = parse_args()
 
     api_key = os.environ.get("DEEPSEEK_API_KEY", "")
-    if not api_key:
+    if not api_key and not args.reparse:
         sys.exit("Error: DEEPSEEK_API_KEY environment variable is not set.")
 
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    client = OpenAI(api_key=api_key, base_url=DEEPSEEK_BASE_URL)
+    client = OpenAI(api_key=api_key or "none", base_url=DEEPSEEK_BASE_URL)
 
     all_dfs = []
 
@@ -275,12 +322,14 @@ def main():
             print(f"Warning: {csv_path} not found, skipping.")
             continue
 
-        df = screen_csv(client, args.model, csv_path, args.batch_size)
-
         stem = os.path.splitext(csv_name)[0]
+        raw_json_path = os.path.join(OUTPUT_DIR, f"raw_{stem}.json")
+
+        df = screen_csv(client, args.model, csv_path, args.batch_size, raw_json_path, args.reparse)
+
         out_path = os.path.join(OUTPUT_DIR, f"{stem}_screened.csv")
         df.to_csv(out_path, index=False)
-        print(f"  Saved → {out_path}")
+        print(f"  Screened CSV → {out_path}")
 
         all_dfs.append(df)
 

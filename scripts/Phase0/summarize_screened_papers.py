@@ -5,6 +5,7 @@ No API calls — reads CSVs from literature/00_similar_data_paper_review/ direct
 Usage:
     python summarize_screened_papers.py
     python summarize_screened_papers.py --min-score 5 --top-n 30
+    python summarize_screened_papers.py --min-if 10 --top-n-if 10
 """
 
 import argparse
@@ -16,6 +17,7 @@ import pandas as pd
 
 INPUT_DIR = "/ShangGaoAIProjects/Gastric/genome/literature/00_similar_data_paper_review"
 OUTPUT_DIR = INPUT_DIR
+JIF_CSV = "/ShangGaoAIProjects/Gastric/genome/literature/Journal_impact_factor.csv"
 
 
 def parse_args():
@@ -23,7 +25,11 @@ def parse_args():
     parser.add_argument("--min-score", type=float, default=4.0,
                         help="Minimum similarity_score to include in top paper list (default: 4.0)")
     parser.add_argument("--top-n", type=int, default=30,
-                        help="Maximum number of top papers to list (default: 30)")
+                        help="Maximum number of top papers to list by similarity score (default: 30)")
+    parser.add_argument("--min-if", type=float, default=5.0,
+                        help="Minimum journal impact factor for the high-IF section (default: 5.0)")
+    parser.add_argument("--top-n-if", type=int, default=20,
+                        help="Maximum papers in the high-IF section (default: 20)")
     return parser.parse_args()
 
 
@@ -41,6 +47,22 @@ def load_combined(input_dir: str) -> pd.DataFrame:
     combined = pd.concat(dfs, ignore_index=True).drop_duplicates(subset=["pmid"])
     combined["similarity_score"] = pd.to_numeric(combined["similarity_score"], errors="coerce").fillna(0)
     return combined.sort_values("similarity_score", ascending=False).reset_index(drop=True)
+
+
+def load_jif_map(jif_csv: str) -> dict[str, float]:
+    """Load journal -> 2024 JIF from Journal_impact_factor.csv. Returns empty dict if file missing."""
+    if not os.path.isfile(jif_csv):
+        return {}
+    df = pd.read_csv(jif_csv, dtype=str).fillna("")
+    result = {}
+    for _, row in df.iterrows():
+        journal = row.get("journal", "").strip()
+        val = row.get("impact_factor_2024", "")
+        try:
+            result[journal] = float(val)
+        except (ValueError, TypeError):
+            pass
+    return result
 
 
 def safe_int(val):
@@ -62,7 +84,8 @@ def score_bar(score: float, max_score: float = 10.0, width: int = 10) -> str:
     return "█" * filled + "░" * (width - filled)
 
 
-def generate_summary(df: pd.DataFrame, min_score: float, top_n: int) -> str:
+def generate_summary(df: pd.DataFrame, min_score: float, top_n: int,
+                     jif_map: dict, min_if: float, top_n_if: int) -> str:
     df["similarity_score"] = pd.to_numeric(df["similarity_score"], errors="coerce").fillna(0)
     df["sample_size_int"] = df["sample_size"].apply(safe_int)
 
@@ -198,6 +221,66 @@ def generate_summary(df: pd.DataFrame, min_score: float, top_n: int) -> str:
             f"",
         ]
 
+    # --- High impact factor section ---
+    if jif_map:
+        df["_jif"] = df["journal"].map(lambda j: jif_map.get(j.strip()))
+        high_if_df = (
+            df[df["_jif"].notna() & (df["_jif"] >= min_if)]
+            .sort_values("_jif", ascending=False)
+            .head(top_n_if)
+        )
+
+        lines += [
+            f"---",
+            f"",
+            f"## Top {len(high_if_df)} Papers by Journal Impact Factor",
+            f"_(JIF ≥ {min_if}, verified 2024 Clarivate JCR, max {top_n_if} papers)_",
+            f"",
+        ]
+
+        for _, row in high_if_df.iterrows():
+            jif = row["_jif"]
+            sim = row["similarity_score"]
+            pmid = row.get("pmid", "")
+            title = row.get("title", "Untitled")
+            journal = row.get("journal", "")
+            year = row.get("year", "")
+            doi_url = row.get("doi_url", "")
+            cancer = row.get("cancer_type", "")
+            seq = row.get("sequencing_type", "")
+            n = safe_int(row.get("sample_size", ""))
+            sample_str = f"n={n}" if n else "n=NR"
+            findings = fmt_list(row.get("key_findings", ""))
+            analyses = fmt_list(row.get("key_analyses", ""))
+            germ = "✓" if row.get("has_germline", "").lower() == "true" else "✗"
+            matched = "✓" if row.get("has_matched_normal", "").lower() == "true" else "✗"
+            link = doi_url if doi_url else f"https://pubmed.ncbi.nlm.nih.gov/{pmid}/"
+
+            lines += [
+                f"### JIF {jif:.1f} — {title}",
+                f"",
+                f"**{journal}** ({year}) | {cancer} | {seq} | {sample_str} | "
+                f"Germline: {germ} | Matched normal: {matched} | Similarity: {sim:.1f}/10",
+                f"",
+                f"[PubMed](https://pubmed.ncbi.nlm.nih.gov/{pmid}/) · [DOI]({link})",
+                f"",
+                f"**Key findings:** {findings}",
+                f"",
+                f"**Analyses:** {analyses}",
+                f"",
+                f"---",
+                f"",
+            ]
+    else:
+        lines += [
+            f"---",
+            f"",
+            f"## Top Papers by Journal Impact Factor",
+            f"",
+            f"_Journal_impact_factor.csv not found — run the journal IF lookup first._",
+            f"",
+        ]
+
     return "\n".join(lines)
 
 
@@ -207,7 +290,13 @@ def main():
     df = load_combined(INPUT_DIR)
     print(f"Loaded {len(df)} papers from {INPUT_DIR}")
 
-    md = generate_summary(df, args.min_score, args.top_n)
+    jif_map = load_jif_map(JIF_CSV)
+    if jif_map:
+        print(f"Loaded {len(jif_map)} journal impact factors from {JIF_CSV}")
+    else:
+        print(f"Warning: {JIF_CSV} not found — high-IF section will be skipped.")
+
+    md = generate_summary(df, args.min_score, args.top_n, jif_map, args.min_if, args.top_n_if)
 
     out_path = os.path.join(OUTPUT_DIR, f"summary_{date.today().isoformat()}.md")
     with open(out_path, "w") as f:
