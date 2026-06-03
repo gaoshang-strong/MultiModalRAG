@@ -1,0 +1,8 @@
+cohort	seq_type	n_total	n_tp53_mut	n_atm_mut	n_arid1a_mut	n_stage_avail	pct_advanced	n_hist_avail	pct_diffuse
+FDU	panel	472	237	29	74	458	44.1	451	34.8
+TCGA_STAD	WXS	431	197	42	116	405	54.8	429	19.1
+OncoSG_2018	WXS	147	67	9	17	102	82.4	123	27.6
+HK_Pfizer	WXS	100	55	7	18	99	84.8	100	29
+TMUCIH_2015	WXS	78	36	4	17	78	66.7	0	NA
+MSK_2017	panel	133	88	4	21	104	100	132	25
+MSK_2023	panel	278	180	16	52	277	86.3	266	26.3

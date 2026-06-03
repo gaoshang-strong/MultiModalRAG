@@ -1,0 +1,605 @@
+{
+  "manifest_version": "1.1",
+  "last_updated": "2026-06-03",
+  "project": "Gastric Cancer Genomics",
+  "root": "/ShangGaoAIProjects/Gastric/genome",
+
+  "cohorts": [
+
+    {
+      "id": "FDU",
+      "name": "FDU Gastric Cancer Cohort",
+      "description": "Prospective Chinese gastric cancer cohort, Fudan University. Targeted panel DNA sequencing (503 cancer genes). Primary analysis cohort for all Phase 0–1 analyses.",
+      "n_samples": 530,
+      "n_somatic_samples": 472,
+      "population": "Chinese",
+      "cancer_type": "Stomach Adenocarcinoma",
+      "sequencing_type": "targeted_panel",
+      "sequencing_genes": 503,
+      "source": "internal",
+      "files": {
+        "master_table": {
+          "path": "analysis_results/Phase0/filtered_master_sample_table.tsv",
+          "format": "TSV",
+          "description": "Primary analysis table: one row per sample, clinical variables + binary somatic mutation columns (somatic_GENE = mutation count)",
+          "n_rows": 530,
+          "key_columns": {
+            "sample_id": "unique sample identifier",
+            "somatic_GENE": "mutation count per gene (column for each of 503 panel genes; prefix somatic_)",
+            "TMB_report_numeric": "tumor mutation burden (mut/Mb, continuous)",
+            "MSI": "microsatellite instability status: MSS | MSI-H",
+            "MMR": "mismatch repair status",
+            "HER2": "HER2 IHC/FISH status",
+            "EBER": "EBV status (1=positive)",
+            "histology": "Chinese-language histology label",
+            "pT": "pathologic T stage",
+            "pN": "pathologic N stage",
+            "path_stage": "pathologic overall stage",
+            "primary_site": "tumor anatomic location",
+            "sex": "patient sex",
+            "age": "patient age at surgery"
+          }
+        },
+        "raw_maf_no_treatment": {
+          "path": "Target_panel_DNA_seq_FDU/MAF_data/2025.12.29 patients without treatment before surgery.csv",
+          "format": "CSV",
+          "description": "Raw MAF-format somatic mutations, treatment-naive patients only (n=472)",
+          "n_rows": 472,
+          "key_columns": {
+            "Tumor_Sample_Barcode": "sample ID",
+            "Hugo_Symbol": "gene name",
+            "Variant_Classification": "mutation type"
+          }
+        },
+        "clinical": {
+          "path": "Target_panel_DNA_seq_FDU/MAF_data/clinical_with_DNA_seq_with_full_TMB_filtered_samples.csv",
+          "format": "CSV",
+          "description": "Clinical data joined with sequencing QC and TMB",
+          "n_rows": 480
+        }
+      },
+      "key_variables": {
+        "msi_column": "MSI",
+        "msi_values": {"positive": ["MSI-H", "MSI"], "negative": ["MSS"]},
+        "tmb_column": "TMB_report_numeric",
+        "tmb_unit": "mut/Mb",
+        "somatic_column_prefix": "somatic_",
+        "somatic_value": "mutation count (>0 means mutated)"
+      },
+      "notes": "Master table is the primary entry point. Somatic columns already binarised. For gene-level analysis use master_table directly. For variant-level detail use raw_maf."
+    },
+
+    {
+      "id": "TCGA_STAD",
+      "name": "TCGA Stomach Adenocarcinoma (GDC)",
+      "description": "TCGA-STAD whole-exome sequencing cohort downloaded from GDC portal. Used as primary external validation cohort.",
+      "n_samples": 431,
+      "population": "Multi-ethnic (US multi-center)",
+      "cancer_type": "Stomach Adenocarcinoma",
+      "sequencing_type": "WES",
+      "source": "GDC / TCGA",
+      "pmid": "25079317",
+      "files": {
+        "somatic_mutations": {
+          "path": "TCGA-STAD/somatic_mutation/somatic_mutation.csv",
+          "format": "CSV",
+          "description": "MAF-format somatic mutations for all TCGA-STAD samples",
+          "n_rows": 183107,
+          "key_columns": {
+            "Hugo_Symbol": "gene name",
+            "Tumor_Sample_Barcode": "sample barcode (TCGA format)",
+            "Variant_Classification": "mutation type (use coding classes for TMB)",
+            "Variant_Type": "SNP | DEL | INS"
+          }
+        },
+        "clinical_patient": {
+          "path": "TCGA-STAD/clinical/clinical_patient_stad.csv",
+          "format": "CSV",
+          "description": "Patient-level clinical data from TCGA",
+          "n_rows": 445,
+          "notes": "No MSI column — MSI must be inferred from TMB (>500 coding mutations = MSI-H proxy)"
+        },
+        "clinical_drug": {
+          "path": "TCGA-STAD/clinical/clinical_drug_stad.csv",
+          "format": "CSV"
+        },
+        "clinical_followup": {
+          "path": "TCGA-STAD/clinical/clinical_follow_up_v1.0_stad.csv",
+          "format": "CSV"
+        }
+      },
+      "key_variables": {
+        "msi_column": null,
+        "msi_proxy": "coding mutation count per sample (>500 = MSI-H proxy, validated against FDU)",
+        "tmb_proxy": "log2(coding mutation count per sample), floor at 1",
+        "coding_classes": ["Missense_Mutation","Nonsense_Mutation","Frame_Shift_Del","Frame_Shift_Ins","Splice_Site","In_Frame_Del","In_Frame_Ins","Nonstop_Mutation"]
+      },
+      "notes": "No direct MSI label. Use mutation count >500 as MSI-H proxy (19.3% MSI-H rate, consistent with published ~22%). TMB must be computed on the fly from somatic_mutation.csv."
+    },
+
+    {
+      "id": "OncoSG_2018",
+      "name": "Gastric Cancer (OncoSG, 2018)",
+      "description": "Singapore gastric cancer WES cohort with molecular subtype annotation.",
+      "n_samples": 147,
+      "population": "Asian (Singaporean)",
+      "cancer_type": "Stomach Adenocarcinoma",
+      "sequencing_type": "WES",
+      "source": "cBioPortal",
+      "cbioportal_id": "stad_oncosg_2018",
+      "pmid": "29670109",
+      "files": {
+        "somatic_mutations": {
+          "path": "Other_cBioPartal_stomach/stad_oncosg_2018/mutations.tsv",
+          "format": "TSV",
+          "description": "cBioPortal SUMMARY-format mutations",
+          "n_rows": 26927,
+          "key_columns": {
+            "hugoGeneSymbol": "gene name",
+            "sampleId": "sample ID",
+            "variantClassification": "mutation type"
+          }
+        },
+        "clinical_patient": {
+          "path": "Other_cBioPartal_stomach/stad_oncosg_2018/clinical_patient.tsv",
+          "format": "TSV",
+          "n_rows": 147
+        },
+        "clinical_sample": {
+          "path": "Other_cBioPartal_stomach/stad_oncosg_2018/clinical_sample.tsv",
+          "format": "TSV",
+          "n_rows": 147,
+          "key_columns": {
+            "TMB_NONSYNONYMOUS": "tumor mutation burden",
+            "MUTATION_COUNT": "raw mutation count",
+            "MOLECULAR_SUBTYPE": "EBV | MSI | GS | CIN (TCGA-style)"
+          }
+        }
+      },
+      "key_variables": {
+        "msi_column": "MOLECULAR_SUBTYPE",
+        "msi_values": {"positive": ["MSI"], "negative": ["CIN","GS","EBV"]},
+        "tmb_column": "TMB_NONSYNONYMOUS",
+        "tmb_unit": "mut/Mb",
+        "mutation_gene_column": "hugoGeneSymbol",
+        "mutation_sample_column": "sampleId"
+      },
+      "notes": "Has MOLECULAR_SUBTYPE — best external cohort for MSI-stratified validation. Column names differ from TCGA (hugoGeneSymbol not Hugo_Symbol)."
+    },
+
+    {
+      "id": "HKU_Pfizer_2014",
+      "name": "Stomach Adenocarcinoma (HKU + Pfizer, 2014)",
+      "description": "Hong Kong University + Pfizer WES cohort.",
+      "n_samples": 100,
+      "population": "Asian (Hong Kong Chinese)",
+      "cancer_type": "Stomach Adenocarcinoma",
+      "sequencing_type": "WES",
+      "source": "cBioPortal",
+      "cbioportal_id": "stad_pfizer_uhongkong",
+      "pmid": "24816253",
+      "files": {
+        "somatic_mutations": {
+          "path": "Other_cBioPartal_stomach/stad_pfizer_uhongkong/mutations.tsv",
+          "format": "TSV",
+          "n_rows": 17427
+        },
+        "clinical_patient": {
+          "path": "Other_cBioPartal_stomach/stad_pfizer_uhongkong/clinical_patient.tsv",
+          "format": "TSV",
+          "n_rows": 100
+        },
+        "clinical_sample": {
+          "path": "Other_cBioPartal_stomach/stad_pfizer_uhongkong/clinical_sample.tsv",
+          "format": "TSV",
+          "n_rows": 100,
+          "key_columns": {
+            "MSI_STATUS": "MSI-H | MSS | Indeterminate",
+            "TMB_NONSYNONYMOUS": "tumor mutation burden"
+          }
+        }
+      },
+      "key_variables": {
+        "msi_column": "MSI_STATUS",
+        "msi_values": {"positive": ["MSI-H"], "negative": ["MSS"]},
+        "tmb_column": "TMB_NONSYNONYMOUS",
+        "mutation_gene_column": "hugoGeneSymbol",
+        "mutation_sample_column": "sampleId"
+      }
+    },
+
+    {
+      "id": "TMUCIH_2015",
+      "name": "Gastric Adenocarcinoma (TMUCIH, China, 2015)",
+      "description": "Tianjin Medical University Cancer Institute & Hospital WES cohort. Closest population to FDU.",
+      "n_samples": 78,
+      "population": "Chinese",
+      "cancer_type": "Stomach Adenocarcinoma",
+      "sequencing_type": "WES",
+      "source": "cBioPortal",
+      "cbioportal_id": "egc_tmucih_2015",
+      "pmid": "25583476",
+      "files": {
+        "somatic_mutations": {
+          "path": "Other_cBioPartal_stomach/egc_tmucih_2015/mutations.tsv",
+          "format": "TSV",
+          "n_rows": 10330
+        },
+        "clinical_patient": {
+          "path": "Other_cBioPartal_stomach/egc_tmucih_2015/clinical_patient.tsv",
+          "format": "TSV",
+          "n_rows": 78
+        },
+        "clinical_sample": {
+          "path": "Other_cBioPartal_stomach/egc_tmucih_2015/clinical_sample.tsv",
+          "format": "TSV",
+          "n_rows": 78,
+          "key_columns": {
+            "SUBTYPE": "molecular subtype",
+            "CDH1_STATUS": "CDH1 mutation status",
+            "DNA_REPAIR_STATUS": "MMR/DNA repair"
+          }
+        }
+      },
+      "key_variables": {
+        "msi_column": "SUBTYPE",
+        "tmb_column": "MUTATION_COUNT",
+        "mutation_gene_column": "hugoGeneSymbol",
+        "mutation_sample_column": "sampleId"
+      },
+      "notes": "Chinese population — most demographically similar to FDU cohort."
+    },
+
+    {
+      "id": "MSK_2017",
+      "name": "Esophagogastric Cancer (MSK-IMPACT, 2017)",
+      "description": "MSK-IMPACT targeted panel cohort; all metastatic esophagogastric cancer (STAD + GEJ + ESCA).",
+      "n_patients": 305,
+      "n_samples": 341,
+      "population": "Multi-ethnic (US, MSK)",
+      "cancer_type": "Esophagogastric Adenocarcinoma",
+      "sequencing_type": "targeted_panel",
+      "panel": "MSK-IMPACT (IMPACT341/410/468/300)",
+      "source": "cBioPortal",
+      "cbioportal_id": "egc_msk_2017",
+      "pmid": "29122779",
+      "files": {
+        "somatic_mutations": {
+          "path": "Other_cBioPartal_stomach/egc_msk_2017/mutations.tsv",
+          "format": "TSV",
+          "n_rows": 2168,
+          "key_columns": {
+            "hugoGeneSymbol": "gene name",
+            "sampleId": "sample ID",
+            "variantClassification": "mutation type"
+          }
+        },
+        "clinical_patient": {
+          "path": "Other_cBioPartal_stomach/egc_msk_2017/clinical_patient.tsv",
+          "format": "TSV",
+          "n_rows": 305
+        },
+        "clinical_sample": {
+          "path": "Other_cBioPartal_stomach/egc_msk_2017/clinical_sample.tsv",
+          "format": "TSV",
+          "n_rows": 341,
+          "key_columns": {
+            "MOLECULAR_SUBTYPE": "EBV | MSI | GS | CIN (TCGA-style)",
+            "MSI_SENSOR_SCORE": "numeric MSIsensor score",
+            "TMB_NONSYNONYMOUS": "tumor mutation burden (mut/Mb)",
+            "MUTATION_COUNT": "raw mutation count",
+            "GENE_PANEL": "panel version (IMPACT341/410/468/300)"
+          }
+        }
+      },
+      "key_variables": {
+        "msi_column": "MOLECULAR_SUBTYPE",
+        "msi_values": {"positive": ["MSI"], "negative": ["CIN", "GS", "EBV"]},
+        "tmb_column": "TMB_NONSYNONYMOUS",
+        "tmb_unit": "mut/Mb",
+        "mutation_gene_column": "hugoGeneSymbol",
+        "mutation_sample_column": "sampleId"
+      },
+      "notes": "All metastatic disease. Multiple IMPACT panel versions — IMPACT341 is most common (n=127). Sample IDs overlap with egc_mskcc_2020 and egc_msk_2023 (same P-XXXXXXX namespace); deduplicate before pooling."
+    },
+
+    {
+      "id": "MSKCC_2020",
+      "name": "Esophagogastric Cancer (MSKCC, 2020)",
+      "description": "MSK-IMPACT targeted panel cohort of esophagogastric cancer (STAD + GEJ + ESCA).",
+      "n_samples": 487,
+      "population": "Multi-ethnic (US, MSK)",
+      "cancer_type": "Esophagogastric Adenocarcinoma",
+      "sequencing_type": "targeted_panel",
+      "panel": "MSK-IMPACT",
+      "source": "cBioPortal",
+      "cbioportal_id": "egc_mskcc_2020",
+      "pmid": "33795256",
+      "files": {
+        "somatic_mutations": {
+          "path": "Other_cBioPartal_stomach/egc_mskcc_2020/mutations.tsv",
+          "format": "TSV",
+          "n_rows": 3308,
+          "key_columns": {
+            "hugoGeneSymbol": "gene name",
+            "sampleId": "sample ID",
+            "variantClassification": "mutation type"
+          }
+        },
+        "clinical_patient": {
+          "path": "Other_cBioPartal_stomach/egc_mskcc_2020/clinical_patient.tsv",
+          "format": "TSV",
+          "n_rows": 487
+        },
+        "clinical_sample": {
+          "path": "Other_cBioPartal_stomach/egc_mskcc_2020/clinical_sample.tsv",
+          "format": "TSV",
+          "n_rows": 487,
+          "key_columns": {
+            "MSI_SCORE": "numeric MSIsensor score (threshold ~10 for MSI-H)",
+            "TMB_NONSYNONYMOUS": "tumor mutation burden (mut/Mb)",
+            "MUTATION_COUNT": "raw mutation count",
+            "TUMOR_PURITY": "estimated tumor purity",
+            "WGD": "whole-genome doubling status"
+          }
+        }
+      },
+      "key_variables": {
+        "msi_column": "MSI_SCORE",
+        "msi_note": "numeric only — use threshold ~10 for MSI-H classification",
+        "tmb_column": "TMB_NONSYNONYMOUS",
+        "tmb_unit": "mut/Mb",
+        "mutation_gene_column": "hugoGeneSymbol",
+        "mutation_sample_column": "sampleId"
+      },
+      "notes": "No categorical MSI label — only numeric MSI_SCORE. Sample IDs overlap with egc_msk_2017 and egc_msk_2023; deduplicate before pooling."
+    },
+
+    {
+      "id": "MSK_TP53_CCR_2022",
+      "name": "Esophagogastric Cancer TP53 (MSK, CCR 2022)",
+      "description": "MSK-IMPACT cohort focused on TP53-mutant esophagogastric cancer; perioperative/neoadjuvant chemotherapy setting.",
+      "n_samples": 237,
+      "population": "Multi-ethnic (US, MSK)",
+      "cancer_type": "Esophagogastric Adenocarcinoma",
+      "sequencing_type": "targeted_panel",
+      "panel": "MSK-IMPACT",
+      "source": "cBioPortal",
+      "cbioportal_id": "egc_msk_tp53_ccr_2022",
+      "pmid": "35377946",
+      "files": {
+        "somatic_mutations": {
+          "path": "Other_cBioPartal_stomach/egc_msk_tp53_ccr_2022/mutations.tsv",
+          "format": "TSV",
+          "n_rows": 2066,
+          "key_columns": {
+            "hugoGeneSymbol": "gene name",
+            "sampleId": "sample ID",
+            "variantClassification": "mutation type"
+          }
+        },
+        "clinical_patient": {
+          "path": "Other_cBioPartal_stomach/egc_msk_tp53_ccr_2022/clinical_patient.tsv",
+          "format": "TSV",
+          "n_rows": 237
+        },
+        "clinical_sample": {
+          "path": "Other_cBioPartal_stomach/egc_msk_tp53_ccr_2022/clinical_sample.tsv",
+          "format": "TSV",
+          "n_rows": 237,
+          "key_columns": {
+            "MSI_TYPE": "Stable | Instable | Indeterminate | Do not report",
+            "TMB_NONSYNONYMOUS": "tumor mutation burden (mut/Mb)",
+            "MUTATION_COUNT": "raw mutation count",
+            "PATHOLOGIC_DOWNSTAGING": "response to neoadjuvant chemo",
+            "NT_RESPONDER": "neoadjuvant therapy response",
+            "SAMPLE_TYPE": "primary/metastatic"
+          }
+        }
+      },
+      "key_variables": {
+        "msi_column": "MSI_TYPE",
+        "msi_values": {"positive": ["Instable"], "negative": ["Stable"]},
+        "tmb_column": "TMB_NONSYNONYMOUS",
+        "tmb_unit": "mut/Mb",
+        "mutation_gene_column": "hugoGeneSymbol",
+        "mutation_sample_column": "sampleId"
+      },
+      "notes": "TP53-enriched cohort by design (perioperative chemo, CIN-enriched). Use with caution for TP53 ME analysis — sampling bias expected. Useful for TP53 co-mutation patterns within CIN subtype."
+    },
+
+    {
+      "id": "MSK_2023",
+      "name": "Esophagogastric Cancer (MSK, 2023)",
+      "description": "Largest MSK-IMPACT cohort; early-onset vs average-onset esophagogastric cancer study.",
+      "n_samples": 902,
+      "population": "Multi-ethnic (US, MSK)",
+      "cancer_type": "Esophagogastric Adenocarcinoma",
+      "sequencing_type": "targeted_panel",
+      "panel": "MSK-IMPACT (IMPACT468/410/341/505)",
+      "source": "cBioPortal",
+      "cbioportal_id": "egc_msk_2023",
+      "pmid": "37699004",
+      "files": {
+        "somatic_mutations": {
+          "path": "Other_cBioPartal_stomach/egc_msk_2023/mutations.tsv",
+          "format": "TSV",
+          "n_rows": 7346,
+          "key_columns": {
+            "hugoGeneSymbol": "gene name",
+            "sampleId": "sample ID",
+            "variantClassification": "mutation type"
+          }
+        },
+        "clinical_patient": {
+          "path": "Other_cBioPartal_stomach/egc_msk_2023/clinical_patient.tsv",
+          "format": "TSV",
+          "n_rows": 902
+        },
+        "clinical_sample": {
+          "path": "Other_cBioPartal_stomach/egc_msk_2023/clinical_sample.tsv",
+          "format": "TSV",
+          "n_rows": 902,
+          "key_columns": {
+            "MSI_TYPE": "Stable | Instable | Indeterminate | Do not report",
+            "MSI_SCORE": "numeric MSIsensor score",
+            "MSI_HYPERMUTANT": "hypermutant flag",
+            "TMB_NONSYNONYMOUS": "tumor mutation burden (mut/Mb)",
+            "MUTATION_COUNT": "raw mutation count",
+            "UPDATED_TUMOR_SUBTYPE": "molecular subtype annotation",
+            "GENE_PANEL": "panel version (IMPACT468/410/341/505)",
+            "AGE_CATEGORY": "Early Onset (≤40) | Average Onset (>40)"
+          }
+        }
+      },
+      "key_variables": {
+        "msi_column": "MSI_TYPE",
+        "msi_values": {"positive": ["Instable"], "negative": ["Stable"]},
+        "tmb_column": "TMB_NONSYNONYMOUS",
+        "tmb_unit": "mut/Mb",
+        "mutation_gene_column": "hugoGeneSymbol",
+        "mutation_sample_column": "sampleId"
+      },
+      "notes": "Largest single MSK cohort (n=902). Most extensively annotated (107 clinical columns). Multiple IMPACT panel versions — IMPACT468 most common (n=616). Sample IDs overlap with egc_msk_2017 and egc_mskcc_2020; deduplicate before pooling. Primary study focus is early-onset EGC biology (AGE_CATEGORY)."
+    },
+
+    {
+      "id": "UTokyo_2014",
+      "name": "Stomach Adenocarcinoma (U Tokyo, 2014)",
+      "description": "University of Tokyo WES cohort, small but with RHOA mutation annotation.",
+      "n_samples": 30,
+      "population": "Japanese",
+      "cancer_type": "Stomach Adenocarcinoma",
+      "sequencing_type": "WES",
+      "source": "cBioPortal",
+      "cbioportal_id": "stad_utokyo",
+      "pmid": "24816255",
+      "files": {
+        "somatic_mutations": {
+          "path": "Other_cBioPartal_stomach/stad_utokyo/mutations.tsv",
+          "format": "TSV",
+          "n_rows": 1874
+        },
+        "clinical_patient": {
+          "path": "Other_cBioPartal_stomach/stad_utokyo/clinical_patient.tsv",
+          "format": "TSV",
+          "n_rows": 30
+        },
+        "clinical_sample": {
+          "path": "Other_cBioPartal_stomach/stad_utokyo/clinical_sample.tsv",
+          "format": "TSV",
+          "n_rows": 30
+        }
+      },
+      "key_variables": {
+        "msi_column": null,
+        "mutation_gene_column": "hugoGeneSymbol",
+        "mutation_sample_column": "sampleId"
+      },
+      "notes": "Small cohort (n=30), no MSI annotation. Use only for targeted gene validation, not MSI-stratified analysis."
+    },
+
+    {
+      "id": "HKU_2011",
+      "name": "Stomach Adenocarcinoma (HKU, 2011)",
+      "description": "Hong Kong University WES cohort, earliest GC WES published cohort.",
+      "n_samples": 22,
+      "population": "Asian (Hong Kong Chinese)",
+      "cancer_type": "Stomach Adenocarcinoma",
+      "sequencing_type": "WES",
+      "source": "cBioPortal",
+      "cbioportal_id": "stad_uhongkong",
+      "pmid": "22037554",
+      "files": {
+        "somatic_mutations": {
+          "path": "Other_cBioPartal_stomach/stad_uhongkong/mutations.tsv",
+          "format": "TSV",
+          "n_rows": 3968
+        },
+        "clinical_patient": {
+          "path": "Other_cBioPartal_stomach/stad_uhongkong/clinical_patient.tsv",
+          "format": "TSV",
+          "n_rows": 22
+        },
+        "clinical_sample": {
+          "path": "Other_cBioPartal_stomach/stad_uhongkong/clinical_sample.tsv",
+          "format": "TSV",
+          "n_rows": 22,
+          "key_columns": {
+            "MSI_STATUS": "MSI-H | MSS"
+          }
+        }
+      },
+      "key_variables": {
+        "msi_column": "MSI_STATUS",
+        "msi_values": {"positive": ["MSI-H"], "negative": ["MSS"]},
+        "tmb_column": "TMB_NONSYNONYMOUS",
+        "mutation_gene_column": "hugoGeneSymbol",
+        "mutation_sample_column": "sampleId"
+      },
+      "notes": "Very small (n=22). Use only for sanity checks or pooled analysis."
+    }
+  ],
+
+  "analysis_results": {
+    "description": "Pre-computed analysis outputs. Read-only — do not overwrite. Re-run the corresponding script to update.",
+    "root": "analysis_results/",
+    "Phase0": {
+      "filtered_master_table": "analysis_results/Phase0/filtered_master_sample_table.tsv",
+      "enrichment_results": "analysis_results/Phase0/enrichment/",
+      "description": "Gene enrichment by clinical subgroup (MSI, stage, histology, sex, HER2, site, differentiation)"
+    },
+    "Phase1": {
+      "somatic_interactions_FDU": {
+        "broad_logistic": "analysis_results/Phase1/somatic_interactions/interactions_broad_logistic.tsv",
+        "description": "Pairwise ME/co-occurrence logistic regression (TRRAP ~ TP53 + TMB_log) for top 50 FDU genes"
+      },
+      "msi_confounding": {
+        "path": "analysis_results/Phase1/msi_confounding/",
+        "description": "Sequential logistic models testing MSI/TMB confounding of TP53-TRRAP ME"
+      },
+      "tmb_logistic": {
+        "path": "analysis_results/Phase1/tmb_logistic/tmb_logistic_all_genes.csv",
+        "description": "gene ~ TMB_log logistic regression for all 489 genes, FDU + TCGA. OR > 1 = TMB-positive gene."
+      },
+      "tcga_pairwise": {
+        "path": "analysis_results/Phase1/tcga_interactions/tcga_pairwise_logistic.csv",
+        "description": "Pairwise ME/co-occurrence logistic (gene_A ~ gene_B + TMB_log) in TCGA-STAD for the 50-gene FDU panel"
+      }
+    }
+  },
+
+  "scripts": {
+    "description": "Analysis scripts. Each script is self-contained with paths hardcoded. Call with Rscript or python3.",
+    "root": "scripts/",
+    "Phase1": {
+      "somatic_interactions": {
+        "path": "scripts/Phase1/somatic_interactions.R",
+        "runtime": "Rscript",
+        "description": "Pairwise FDU somatic interactions: Fisher test + TMB-adjusted logistic for top-50 genes"
+      },
+      "msi_confounding": {
+        "path": "scripts/Phase1/msi_confounding_logistic.R",
+        "runtime": "Rscript",
+        "description": "Sequential logistic models testing MSI/TMB confounding of TP53-TRRAP ME in FDU"
+      },
+      "tmb_logistic_all_genes": {
+        "path": "scripts/Phase1/tmb_logistic_all_genes.R",
+        "runtime": "Rscript",
+        "description": "TMB logistic regression (gene ~ TMB_log) for all shared genes, FDU + TCGA"
+      },
+      "tcga_pairwise_logistic": {
+        "path": "scripts/Phase1/tcga_pairwise_logistic.R",
+        "runtime": "Rscript",
+        "description": "Pairwise logistic (gene_A ~ gene_B + TMB_log) in TCGA-STAD, 50-gene set"
+      }
+    }
+  },
+
+  "schema_notes": {
+    "cbioportal_mutation_columns": "cBioPortal API mutations use camelCase: hugoGeneSymbol, sampleId, variantClassification, referenceAllele, tumorSeqAllele2, startPosition, endPosition",
+    "tcga_mutation_columns": "TCGA MAF uses: Hugo_Symbol, Tumor_Sample_Barcode, Variant_Classification, Reference_Allele, Tumor_Seq_Allele2",
+    "fdu_somatic_columns": "FDU master table uses somatic_ prefix: somatic_TP53 = mutation count (integer, >0 means mutated)",
+    "tmb_computation_wes": "For WES cohorts without TMB: count coding mutations per sample (Variant_Classification in coding_classes), then log2(count). Coding classes: Missense_Mutation, Nonsense_Mutation, Frame_Shift_Del, Frame_Shift_Ins, Splice_Site, In_Frame_Del, In_Frame_Ins, Nonstop_Mutation"
+  }
+}

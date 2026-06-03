@@ -1,0 +1,3 @@
+gene_b	pooled_OR_A	pooled_OR_B	pooled_OR_C	p_value_A	p_value_B	p_value_C	I2_A	I2_B	I2_C	n_cohorts_A	n_cohorts_B	n_cohorts_C	sig_A	sig_B	sig_C	OR_ratio_A_to_C	conclusion
+ATM	0.3144372711121735	0.33795295359273864	0.3423437936927186	7.848196536434482e-7	8.243594979458675e-6	1.2856441365130775e-5	0	0	0	5	5	5	TRUE	TRUE	TRUE	0.918	robust: signal survives clinical adjustment
+ARID1A	0.2721214924980755	0.2692021058797751	0.29588713772662	1.534612345321492e-12	1.1762336763487192e-12	4.378008360443242e-9	19.7	15.8	26.2	7	7	6	TRUE	TRUE	TRUE	0.92	robust: signal survives clinical adjustment
