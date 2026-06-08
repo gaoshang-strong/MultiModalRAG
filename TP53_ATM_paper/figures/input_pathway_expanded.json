@@ -1,0 +1,145 @@
+{
+  "title": "ATM–TP53 Signal Flow  ·  Mutual Exclusivity Mechanism in Gastric Cancer",
+  "subtitle": "Mutual exclusivity arises because ATM kinase cascade (blue) and TP53 transcriptional programme (red)\nboth converge on shared effectors (purple). Single-pathway loss is tolerated; dual loss silences all DDR output.",
+  "layout": "flow",
+  "figsize": [22, 14],
+  "xlim": [-10.2, 12.8],
+  "ylim": [-1.2, 11.5],
+
+  "legend_labels": {
+    "left":   "ATM-specific",
+    "right":  "TP53-specific",
+    "center": "Convergence zone",
+    "output": "Cell fate output"
+  },
+
+  "zones": [
+    {"comp": "left",   "label": "ATM Kinase Cascade",          "x": [-10.0, -1.5], "y": [-0.9, 11.2]},
+    {"comp": "center", "label": "Convergence Zone",            "x": [-3.0,   4.8], "y": [-0.9, 11.0], "linestyle": "--"},
+    {"comp": "right",  "label": "TP53 Transcriptional\nProgramme", "x": [4.0, 12.5], "y": [2.8, 11.2]}
+  ],
+
+  "nodes": [
+    {"key": "dna",      "label": "DNA\nDamage",              "comp": "trigger", "x":  0.0,  "y": 10.5},
+
+    {"key": "mrn",      "label": "MRN Complex\n(MRE11/NBN/RAD50)", "comp": "left",   "x": -6.5,  "y": 9.0},
+    {"key": "atm",      "label": "ATM",                      "comp": "left",   "x": -4.5,  "y": 7.5},
+    {"key": "gh2ax",    "label": "γH2AX",                    "comp": "left",   "x": -8.2,  "y": 6.2},
+    {"key": "mdc1",     "label": "MDC1",                     "comp": "left",   "x": -6.2,  "y": 6.2},
+    {"key": "kap1",     "label": "KAP1/TRIM28",              "comp": "left",   "x": -8.2,  "y": 5.0},
+    {"key": "rnf8",     "label": "RNF8",                     "comp": "left",   "x": -8.2,  "y": 3.8},
+    {"key": "rnf168",   "label": "RNF168",                   "comp": "left",   "x": -8.2,  "y": 2.6},
+    {"key": "tp53bp1",  "label": "53BP1",                    "comp": "left",   "x": -6.2,  "y": 2.6},
+
+    {"key": "kat5",     "label": "KAT5\n(TIP60)",            "comp": "center", "x":  1.0,  "y": 9.3},
+    {"key": "abraxas1", "label": "ABRAXAS1",                 "comp": "center", "x": -3.0,  "y": 3.8},
+    {"key": "chek2",    "label": "CHEK2",                    "comp": "center", "x": -2.0,  "y": 6.2},
+    {"key": "atr",      "label": "ATR",                      "comp": "center", "x":  2.0,  "y": 6.2},
+    {"key": "chek1",    "label": "CHEK1",                    "comp": "center", "x":  0.0,  "y": 5.0},
+    {"key": "brca1",    "label": "BRCA1",                    "comp": "center", "x":  2.5,  "y": 5.0},
+    {"key": "foxo3",    "label": "FOXO3",                    "comp": "center", "x": -1.5,  "y": 2.6},
+    {"key": "palb2",    "label": "PALB2",                    "comp": "center", "x":  3.5,  "y": 3.8},
+    {"key": "brca2",    "label": "BRCA2",                    "comp": "center", "x":  2.5,  "y": 2.6},
+    {"key": "rad51",    "label": "RAD51",                    "comp": "center", "x":  2.5,  "y": 1.4},
+
+    {"key": "ptp53",    "label": "p-TP53\n(Ser15)",          "comp": "center", "x":  3.0,  "y": 8.5},
+    {"key": "wee1",     "label": "WEE1",                     "comp": "center", "x":  0.5,  "y": 3.5},
+    {"key": "cdk1",     "label": "CDK1",                     "comp": "center", "x":  0.5,  "y": 2.1},
+    {"key": "ppm1d",    "label": "PPM1D\n(WIP1)",            "comp": "right",  "x":  7.0,  "y": 8.2},
+    {"key": "parp1",    "label": "PARP1",                    "comp": "left",   "x": -3.5,  "y": 9.5},
+
+    {"key": "tp53",     "label": "TP53",                     "comp": "right",  "x":  5.5,  "y": 7.5},
+    {"key": "mdm2",     "label": "MDM2",                     "comp": "right",  "x":  9.0,  "y": 7.5},
+    {"key": "arf",      "label": "ARF/p14\n(CDKN2A)",        "comp": "right",  "x":  9.0,  "y": 9.0},
+    {"key": "cdkn1a",   "label": "CDKN1A\n(p21)",            "comp": "right",  "x":  4.5,  "y": 6.0},
+    {"key": "sfn",      "label": "14-3-3σ\n(SFN)",           "comp": "right",  "x":  6.5,  "y": 6.0},
+    {"key": "gadd45",   "label": "GADD45",                   "comp": "right",  "x":  8.5,  "y": 6.0},
+    {"key": "bax",      "label": "BAX",                      "comp": "right",  "x":  4.5,  "y": 4.8},
+    {"key": "puma",     "label": "PUMA",                     "comp": "right",  "x":  6.5,  "y": 4.8},
+    {"key": "noxa",     "label": "NOXA",                     "comp": "right",  "x":  8.0,  "y": 4.8},
+    {"key": "ddb2",     "label": "DDB2",                     "comp": "right",  "x": 10.5,  "y": 4.8},
+    {"key": "tigar",    "label": "TIGAR",                    "comp": "right",  "x": 11.5,  "y": 6.0},
+
+    {"key": "out_cc",   "label": "Cell Cycle\nArrest",        "comp": "output", "x": -4.5,  "y": -0.5},
+    {"key": "out_dr",   "label": "DNA Repair\n(HR/NHEJ/NER)", "comp": "output", "x":  1.5,  "y": -0.5},
+    {"key": "out_ap",   "label": "Apoptosis",                 "comp": "output", "x":  6.0,  "y": -0.5},
+    {"key": "out_sen",  "label": "Senescence",                "comp": "output", "x": 10.5,  "y": -0.5}
+  ],
+
+  "edges": [
+    {"src": "dna",     "dst": "mrn",     "type": "recruit", "label": "",              "rad":  0.0},
+    {"src": "dna",     "dst": "kat5",    "type": "recruit", "label": "",              "rad":  0.1},
+    {"src": "dna",     "dst": "atr",     "type": "recruit", "label": "",              "rad":  0.1},
+    {"src": "dna",     "dst": "parp1",   "type": "recruit", "label": "",              "rad": -0.15},
+
+    {"src": "parp1",   "dst": "atm",     "type": "recruit", "label": "PAR signal",   "rad":  0.2},
+
+    {"src": "mrn",     "dst": "atm",     "type": "recruit", "label": "activates ATM", "rad":  0.0},
+
+    {"src": "kat5",    "dst": "atm",     "type": "phos",    "label": "K3016 acetyl",  "rad": -0.2},
+    {"src": "kat5",    "dst": "tp53",    "type": "phos",    "label": "K382 acetyl",   "rad":  0.1},
+
+    {"src": "atm",     "dst": "gh2ax",   "type": "phos",    "label": "γH2AX mark",    "rad":  0.0},
+    {"src": "atm",     "dst": "mdc1",    "type": "phos",    "label": "",              "rad":  0.0},
+    {"src": "atm",     "dst": "kap1",    "type": "phos",    "label": "Ser824",        "rad":  0.1},
+    {"src": "atm",     "dst": "rnf8",    "type": "phos",    "label": "",              "rad":  0.1},
+    {"src": "atm",     "dst": "tp53bp1", "type": "phos",    "label": "",              "rad":  0.2},
+    {"src": "atm",     "dst": "chek2",   "type": "phos",    "label": "Thr68",         "rad":  0.0},
+    {"src": "atm",     "dst": "brca1",   "type": "phos",    "label": "",              "rad":  0.2},
+    {"src": "atm",     "dst": "abraxas1","type": "phos",    "label": "Ser406",        "rad": -0.1},
+    {"src": "atm",     "dst": "ptp53",   "type": "phos",    "label": "Ser15",          "rad":  0.1},
+    {"src": "ptp53",   "dst": "tp53",    "type": "phos",    "label": "stabilizes",     "rad":  0.0},
+
+    {"src": "gh2ax",   "dst": "mdc1",    "type": "recruit", "label": "",              "rad":  0.0},
+    {"src": "mdc1",    "dst": "rnf8",    "type": "recruit", "label": "",              "rad":  0.0},
+    {"src": "rnf8",    "dst": "rnf168",  "type": "ubi_inh", "label": "H2A-Ub cascade","rad": 0.0},
+    {"src": "rnf168",  "dst": "tp53bp1", "type": "recruit", "label": "",              "rad":  0.2},
+
+    {"src": "abraxas1","dst": "brca1",   "type": "recruit", "label": "",              "rad":  0.0},
+
+    {"src": "chek2",   "dst": "chek1",   "type": "phos",    "label": "",              "rad":  0.0},
+    {"src": "chek2",   "dst": "tp53",    "type": "phos",    "label": "Ser20",         "rad":  0.2},
+    {"src": "chek2",   "dst": "foxo3",   "type": "phos",    "label": "Ser413",        "rad": -0.2},
+    {"src": "atr",     "dst": "chek1",   "type": "phos",    "label": "",              "rad":  0.2},
+
+    {"src": "brca1",   "dst": "palb2",   "type": "recruit", "label": "",              "rad":  0.0},
+    {"src": "palb2",   "dst": "brca2",   "type": "recruit", "label": "",              "rad":  0.0},
+    {"src": "brca2",   "dst": "rad51",   "type": "recruit", "label": "HR repair",     "rad":  0.0},
+
+    {"src": "mdm2",    "dst": "tp53",    "type": "ubi_inh", "label": "degrades",      "rad":  0.3},
+    {"src": "tp53",    "dst": "mdm2",    "type": "tx",      "label": "feedback",      "rad":  0.3},
+    {"src": "arf",     "dst": "mdm2",    "type": "ubi_inh", "label": "inhibits",      "rad":  0.0},
+
+    {"src": "tp53",    "dst": "cdkn1a",  "type": "tx",      "label": "",              "rad":  0.0},
+    {"src": "tp53",    "dst": "sfn",     "type": "tx",      "label": "",              "rad":  0.1},
+    {"src": "tp53",    "dst": "gadd45",  "type": "tx",      "label": "",              "rad":  0.2},
+    {"src": "tp53",    "dst": "bax",     "type": "tx",      "label": "",              "rad": -0.1},
+    {"src": "tp53",    "dst": "puma",    "type": "tx",      "label": "",              "rad":  0.1},
+    {"src": "tp53",    "dst": "noxa",    "type": "tx",      "label": "",              "rad":  0.2},
+    {"src": "tp53",    "dst": "ddb2",    "type": "tx",      "label": "",              "rad":  0.3},
+    {"src": "tp53",    "dst": "tigar",   "type": "tx",      "label": "",              "rad":  0.3},
+    {"src": "tp53",    "dst": "ppm1d",   "type": "tx",      "label": "",              "rad":  0.2},
+    {"src": "ppm1d",   "dst": "ptp53",   "type": "ubi_inh", "label": "dePhosphor.",   "rad":  0.3},
+
+    {"src": "chek1",   "dst": "out_cc",  "type": "phos",    "label": "",              "rad":  0.0},
+    {"src": "chek1",   "dst": "wee1",    "type": "phos",    "label": "",              "rad":  0.2},
+    {"src": "wee1",    "dst": "cdk1",    "type": "ubi_inh", "label": "Tyr15-P",      "rad":  0.0},
+    {"src": "cdk1",    "dst": "out_cc",  "type": "phos",    "label": "",              "rad": -0.2},
+    {"src": "cdkn1a",  "dst": "out_cc",  "type": "phos",    "label": "",              "rad":  0.0},
+    {"src": "sfn",     "dst": "out_cc",  "type": "phos",    "label": "",              "rad":  0.1},
+    {"src": "tp53bp1", "dst": "out_cc",  "type": "recruit", "label": "",              "rad": -0.1},
+    {"src": "foxo3",   "dst": "out_cc",  "type": "tx",      "label": "",              "rad":  0.2},
+
+    {"src": "rad51",   "dst": "out_dr",  "type": "phos",    "label": "",              "rad":  0.0},
+    {"src": "gadd45",  "dst": "out_dr",  "type": "phos",    "label": "",              "rad":  0.1},
+    {"src": "ddb2",    "dst": "out_dr",  "type": "tx",      "label": "",              "rad":  0.0},
+
+    {"src": "bax",     "dst": "out_ap",  "type": "phos",    "label": "",              "rad":  0.0},
+    {"src": "puma",    "dst": "out_ap",  "type": "phos",    "label": "",              "rad":  0.0},
+    {"src": "noxa",    "dst": "out_ap",  "type": "phos",    "label": "",              "rad":  0.1},
+    {"src": "foxo3",   "dst": "out_ap",  "type": "tx",      "label": "",              "rad": -0.1},
+
+    {"src": "gadd45",  "dst": "out_sen", "type": "phos",    "label": "",              "rad": -0.1},
+    {"src": "tigar",   "dst": "out_sen", "type": "tx",      "label": "",              "rad":  0.0}
+  ]
+}
