@@ -61,8 +61,16 @@ TP53_COLORS <- c(mutant="#E41A1C", wildtype="#377EB8")
 message("Loading DepMap metadata and TP53 status...")
 model   <- fread(file.path(DEPMAP_DIR, "Model.csv"))
 tp53_df <- fread(file.path(DEPMAP_DIR, "mutations_TP53_damaging.csv"))
-# TP53 > 0 → mutant (damaging mutation); TP53 == 0 → wildtype
-tp53_df[, tp53_status := ifelse(TP53 > 0, "mutant", "wildtype")]
+
+# CN homozygous deletion (< 0.3 relative CN) — matches Python skill _data.py
+tp53_cn_raw <- fread(file.path(DEPMAP_DIR, "OmicsCNGene.csv"),
+                     select = c("V1", "TP53 (7157)"))
+setnames(tp53_cn_raw, c("ModelID", "TP53_cn"))
+tp53_df <- merge(tp53_df, tp53_cn_raw[, .(ModelID, TP53_cn)],
+                 by = "ModelID", all.x = TRUE)
+tp53_df[is.na(TP53_cn), TP53_cn := 1.0]  # assume diploid if not profiled
+# mutant = damaging mutation OR homozygous CN deletion (CN < 0.3)
+tp53_df[, tp53_status := ifelse(TP53 > 0 | TP53_cn < 0.3, "mutant", "wildtype")]
 
 # Master TP53 table with lineage info
 tp53_master <- merge(tp53_df[, .(ModelID, tp53_status)],
@@ -79,27 +87,6 @@ message(sprintf("  Gastric cell lines: %d (mut=%d, wt=%d)",
   sum(tp53_master$is_gastric),
   sum(tp53_master$is_gastric & tp53_master$tp53_status=="mutant"),
   sum(tp53_master$is_gastric & tp53_master$tp53_status=="wildtype")))
-
-# Load ATM damaging mutation status (same file as TP53 but full matrix)
-message("Loading ATM mutation status...")
-atm_mat <- fread(file.path(DEPMAP_DIR, "OmicsSomaticMutationsMatrixDamaging.csv"),
-                 select = c("V1", "ATM (472)"))
-setnames(atm_mat, c("ModelID","ATM_dmg"))
-atm_mat[, atm_status := ifelse(ATM_dmg > 0, "mutant", "wildtype")]
-tp53_master <- merge(tp53_master, atm_mat[, .(ModelID, atm_status)],
-                     by="ModelID", all.x=TRUE)
-tp53_master[is.na(atm_status), atm_status := "wildtype"]  # assume WT if not profiled
-
-# Strict SL group: TP53-mut/ATM-WT vs TP53-WT/ATM-WT (excludes ATM-mut from both arms)
-tp53_master[, strict_group := fcase(
-  tp53_status=="mutant"   & atm_status=="wildtype", "SL",
-  tp53_status=="wildtype" & atm_status=="wildtype", "ctrl",
-  default = NA_character_
-)]
-message(sprintf("  Strict SL group: SL=%d  ctrl=%d  (ATM-mut excluded: %d)",
-  sum(tp53_master$strict_group=="SL",  na.rm=TRUE),
-  sum(tp53_master$strict_group=="ctrl", na.rm=TRUE),
-  sum(tp53_master$atm_status=="mutant", na.rm=TRUE)))
 
 # Normalised name for matching GDSC/PRISM cell lines
 norm_name <- function(x) toupper(gsub("[^A-Z0-9]", "", toupper(x)))
@@ -120,6 +107,18 @@ wilcox_summary <- function(mut_vals, wt_vals) {
        n_mut = n1, n_wt = n2,
        median_mut = median(mut_vals, na.rm=TRUE),
        median_wt  = median(wt_vals,  na.rm=TRUE))
+}
+
+# Bootstrap 95% CI on delta = mean(mut) - mean(WT) — matches Python skill _stats.py
+bootstrap_ci <- function(mut_vals, wt_vals, n_boot = 2000, seed = 42) {
+  set.seed(seed)
+  deltas <- replicate(n_boot, {
+    mean(sample(mut_vals, length(mut_vals), replace = TRUE)) -
+    mean(sample(wt_vals,  length(wt_vals),  replace = TRUE))
+  })
+  list(delta = mean(mut_vals) - mean(wt_vals),
+       ci_lo  = unname(quantile(deltas, 0.025)),
+       ci_hi  = unname(quantile(deltas, 0.975)))
 }
 
 # Linear regression: metric ~ tp53_status + lineage (controls for tissue type)
@@ -198,6 +197,7 @@ run_analysis <- function(df, metric_col, metric_label, title_base,
       message(sprintf("  [%s | %s] too few samples, skipping", prefix, scope)); next
     }
 
+    boot   <- bootstrap_ci(mut_v, wt_v)
     p_str  <- if (wx$p < 0.001) sprintf("p=%.2e", wx$p) else sprintf("p=%.3f", wx$p)
     r_str  <- sprintf("r=%.2f", wx$r)
     lm_str <- if (!is.null(lm)) sprintf("  |  lm(lineage-adj) β=%.3f p=%.3f",
@@ -215,6 +215,9 @@ run_analysis <- function(df, metric_col, metric_label, title_base,
       scope=scope, metric=metric_col,
       n_mut=wx$n_mut, n_wt=wx$n_wt,
       median_mut=wx$median_mut, median_wt=wx$median_wt,
+      delta  = boot$delta,
+      ci_lo  = boot$ci_lo,
+      ci_hi  = boot$ci_hi,
       wilcox_p=wx$p, effect_r=wx$r,
       lm_beta   = if (!is.null(lm)) lm$estimate else NA,
       lm_p      = if (!is.null(lm)) lm$p        else NA,
@@ -242,24 +245,13 @@ atm_df  <- crispr[, .(ModelID, ATM_effect = .SD[[1]]), .SDcols = atm_col]
 atm_df  <- merge(atm_df, tp53_master, by="ModelID", all.x=TRUE)
 atm_df  <- atm_df[!is.na(tp53_status)]
 
-# Primary analysis: all TP53-mut vs TP53-WT (includes ATM-mut in both groups)
+# All TP53-mut vs TP53-WT (ATM-mut included — ATM KO renders endogenous ATM status irrelevant)
 dep_res <- run_analysis(
   atm_df, "ATM_effect",
   "ATM CRISPR Gene Effect (negative = essential)",
-  "ATM CRISPR KO — TP53-mut vs TP53-WT (all)",
+  "ATM CRISPR KO — TP53-mut vs TP53-WT",
   file.path(OUT_BASE, "depmap_crispr"), "atm_ko_allTP53")
-
-# Strict analysis: TP53-mut/ATM-WT vs TP53-WT/ATM-WT (excludes ATM-mut cell lines)
-atm_df_strict <- atm_df[!is.na(strict_group)]
-atm_df_strict[, tp53_status := strict_group]  # reuse grouping variable
-dep_res_strict <- run_analysis(
-  atm_df_strict, "ATM_effect",
-  "ATM CRISPR Gene Effect (negative = essential)",
-  "ATM CRISPR KO — TP53-mut/ATM-WT vs TP53-WT/ATM-WT",
-  file.path(OUT_BASE, "depmap_crispr"), "atm_ko_strict")
-if (!is.null(dep_res_strict)) dep_res_strict$comparison <- "strict_ATM_WT_only"
-if (!is.null(dep_res))        dep_res$comparison        <- "all_TP53"
-dep_res <- rbindlist(list(dep_res, dep_res_strict), fill=TRUE)
+if (!is.null(dep_res)) dep_res$comparison <- "all_TP53"
 
 write.csv(dep_res, file.path(OUT_BASE, "depmap_crispr", "stats_summary.csv"),
           row.names=FALSE)
@@ -288,16 +280,14 @@ ku[, AUC      := as.numeric(AUC)]
 ku[, name_key := norm_name(CELL_LINE_NAME)]
 message(sprintf("  KU-55933: %d cell lines", nrow(ku)))
 
-# Link to TP53 + ATM status
-ku_merged <- merge(ku, tp53_master[, .(name_key, ModelID, tp53_status, strict_group,
+# Link to TP53 status
+ku_merged <- merge(ku, tp53_master[, .(name_key, ModelID, tp53_status,
                                         CellLineName, OncotreeLineage,
                                         OncotreePrimaryDisease, is_gastric)],
                    by="name_key", all.x=TRUE)
 ku_merged[is.na(is_gastric), is_gastric := TCGA_DESC %in% GASTRIC_TCGA]
-# Strict: TP53-mut/ATM-WT vs TP53-WT/ATM-WT
-ku_merged <- ku_merged[!is.na(strict_group)]
-ku_merged[, tp53_status := ifelse(strict_group=="SL", "mutant", "wildtype")]
-message(sprintf("  KU-55933 (strict ATM-WT): %d cell lines (mut=%d wt=%d)",
+ku_merged <- ku_merged[!is.na(tp53_status)]
+message(sprintf("  KU-55933: %d cell lines (mut=%d wt=%d)",
   nrow(ku_merged),
   sum(ku_merged$tp53_status=="mutant"),
   sum(ku_merged$tp53_status=="wildtype")))
@@ -337,22 +327,17 @@ azd_lib1[, name_key := norm_name(CELL_LINE_NAME)]
 message(sprintf("  AZD0156: %d unique cell lines", nrow(azd_lib1)))
 
 azd_merged <- merge(azd_lib1,
-                    tp53_master[, .(name_key, ModelID, tp53_status, strict_group,
+                    tp53_master[, .(name_key, ModelID, tp53_status,
                                     CellLineName, OncotreeLineage,
                                     OncotreePrimaryDisease, is_gastric)],
                     by="name_key", all.x=TRUE)
 azd_merged[is.na(is_gastric), is_gastric :=
              grepl("Stomach|Gastric|oesophag|esophag", TISSUE, ignore.case=TRUE)]
-# Strict comparison: TP53-mut/ATM-WT vs TP53-WT/ATM-WT
-azd_merged <- azd_merged[!is.na(strict_group)]
-azd_merged[, tp53_status := strict_group]
-message(sprintf("  AZD0156 (strict ATM-WT) matched: %d cell lines (SL=%d ctrl=%d)",
+azd_merged <- azd_merged[!is.na(tp53_status)]
+message(sprintf("  AZD0156 matched: %d cell lines (mut=%d wt=%d)",
   nrow(azd_merged),
-  sum(azd_merged$tp53_status=="SL"),
-  sum(azd_merged$tp53_status=="ctrl")))
-# rename group labels to mutant/wildtype for run_analysis compatibility
-azd_merged[tp53_status=="SL",   tp53_status := "mutant"]
-azd_merged[tp53_status=="ctrl", tp53_status := "wildtype"]
+  sum(azd_merged$tp53_status=="mutant"),
+  sum(azd_merged$tp53_status=="wildtype")))
 
 for (metric in c("lib1_IC50_ln","lib1_MaxE")) {
   mlabel <- if (metric=="lib1_IC50_ln") "LN(IC50) [AZD0156]" else "MaxE (max inhibition) [AZD0156]"
@@ -421,15 +406,13 @@ for (nm in names(COMBOS)) {
   combo_cl[, name_key := norm_name(CELL_LINE_NAME)]
 
   combo_merged <- merge(combo_cl,
-    tp53_master[, .(name_key, ModelID, tp53_status, strict_group, CellLineName,
+    tp53_master[, .(name_key, ModelID, tp53_status, CellLineName,
                     OncotreeLineage, OncotreePrimaryDisease, is_gastric)],
     by="name_key", all.x=TRUE)
   combo_merged[is.na(is_gastric), is_gastric :=
     grepl("Stomach|Gastric|oesophag|esophag", TISSUE, ignore.case=TRUE)]
-  # Strict: ATM-WT only
-  combo_merged <- combo_merged[!is.na(strict_group)]
-  combo_merged[, tp53_status := ifelse(strict_group=="SL","mutant","wildtype")]
-  message(sprintf("  AZD0156 + %s (strict ATM-WT): %d cell lines (mut=%d wt=%d)",
+  combo_merged <- combo_merged[!is.na(tp53_status)]
+  message(sprintf("  AZD0156 + %s: %d cell lines (mut=%d wt=%d)",
     partner, nrow(combo_merged),
     sum(combo_merged$tp53_status=="mutant"),
     sum(combo_merged$tp53_status=="wildtype")))
